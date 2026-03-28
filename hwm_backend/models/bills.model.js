@@ -10,7 +10,14 @@ module.exports = (sequelize, DataTypes) => {
 
       patient_id: { type: DataTypes.UUID },
       appointment_id: { type: DataTypes.UUID },
+      lab_result_id: { type: DataTypes.UUID }, // ✅ NEW: Link to lab test
       admin_id: { type: DataTypes.UUID },
+
+      // ✅ NEW: Fee type to distinguish doctor consultation vs lab test
+      fee_type: {
+        type: DataTypes.ENUM("consultation", "lab_test"),
+        defaultValue: "consultation",
+      },
 
       total_amount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
       paid_amount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0.0 },

@@ -10,6 +10,7 @@ const Home = () => {
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [selectedDepartmentInModal, setSelectedDepartmentInModal] = useState(null);
+  const [backgroundImage, setBackgroundImage] = useState("https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&auto=format&fit=crop&w=2069&q=80"); // Dynamic background image
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -87,23 +88,18 @@ const Home = () => {
       </header>
 
       <main className="hw-main">
-        <section className="hw-hero hw-container">
-          <div className="hw-hero-left">
-            <h1 className="hw-hero-title">Streamlined care, intelligent workflows</h1>
-            <p className="hw-lead">Manage patients, appointments, prescriptions and more — securely and efficiently. Tailored for clinics, hospitals and private practices.</p>
+        <section 
+          className="hw-hero" 
+          style={{ backgroundImage: `url(${backgroundImage})` }}
+        >
+          <div className="hw-hero-overlay"></div>
+          <div className="hw-hero-content">
+            <h1 className="hw-hero-title">Streamlined Healthcare Management</h1>
+            <p className="hw-hero-subtitle">Manage patients, appointments, and prescriptions with intelligent workflows. Secure, efficient, and tailored for modern clinics.</p>
             <div className="hw-hero-cta">
-              <Link to="/signup" className="hw-btn primary">Get started</Link>
-              <Link to="/login" className="hw-btn ghost">Have an account?</Link>
+              <Link to="/signup" className="hw-btn primary">Get Started</Link>
+              <Link to="/login" className="hw-btn secondary">Sign In</Link>
             </div>
-          </div>
-          <div className="hw-hero-right" aria-hidden>
-            <svg className="hw-illustration" viewBox="0 0 640 512" xmlns="http://www.w3.org/2000/svg">
-              <rect x="0" y="0" width="640" height="512" rx="20" fill="#f1f5f9" />
-              <g transform="translate(80,80)" fill="#0d6efd">
-                <circle cx="200" cy="104" r="64" opacity="0.95" />
-                <rect x="56" y="208" width="288" height="24" rx="12" fill="#60a5fa" />
-              </g>
-            </svg>
           </div>
         </section>
 

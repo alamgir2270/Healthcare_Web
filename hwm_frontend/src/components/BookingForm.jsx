@@ -176,17 +176,34 @@ const BookingForm = ({ doctor, onClose, onSuccess }) => {
           }}
         >
           <p style={{ margin: "0.5rem 0" }}>
-            <strong>Specialty:</strong> {doctor.specialty}
+            <strong>� Department:</strong> {doctor.Department?.name || "Not set"}
+          </p>
+          <p style={{ margin: "0.5rem 0" }}>
+            <strong>�🏥 Specialty:</strong> {doctor.specialty || "Not set"}
+          </p>
+          <p style={{ margin: "0.5rem 0" }}>
+            <strong>📄 License Number:</strong> {doctor.license_no || "Not set"}
+          </p>
+          <p style={{ margin: "0.5rem 0" }}>
+            <strong>📧 Email:</strong> {doctor.User?.email || "Not set"}
+          </p>
+          <p style={{ margin: "0.5rem 0" }}>
+            <strong>📱 Phone:</strong> {doctor.User?.phone || "Not set"}
           </p>
           <p style={{ margin: "0.5rem 0", fontWeight: "bold", color: "#0056b3" }}>
             📅 <strong>Available Days:</strong> {availableDays.join(", ")}
           </p>
           <p style={{ margin: "0.5rem 0" }}>
-            <strong>Available Hours:</strong> {doctor.available_hours || "09:00 - 17:00"}
+            <strong>⏰ Available Hours:</strong> {doctor.available_hours || "09:00 - 17:00"}
           </p>
+          {doctor.bio && (
+            <p style={{ margin: "0.5rem 0", fontSize: "0.9rem", color: "#333", fontStyle: "italic" }}>
+              <strong>📋 Bio:</strong> {doctor.bio}
+            </p>
+          )}
           {doctor.rating_cache && (
             <p style={{ margin: "0.5rem 0" }}>
-              <strong>Rating:</strong> ⭐ {doctor.rating_cache}
+              <strong>⭐ Rating:</strong> {doctor.rating_cache}
             </p>
           )}
           <p style={{ margin: "0.5rem 0", fontSize: "0.85rem", color: "#666" }}>

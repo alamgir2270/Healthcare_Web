@@ -13,7 +13,6 @@ const {
   Prescription,
   Bill,
   Feedback,
-  LabResult,
 } = require("../models");
 const { Op } = require("sequelize");
 
@@ -291,43 +290,6 @@ exports.getPrescriptionStats = async (req, res) => {
     });
   } catch (err) {
     console.error('Analytics.getPrescriptionStats error:', err && err.stack ? err.stack : err);
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-/**
- * Get Lab Results Statistics
- * GET /api/analytics/lab-results/stats
- */
-exports.getLabResultsStats = async (req, res) => {
-  try {
-    const [totalTests, normalResults, abnormalResults] = await Promise.all([
-      LabResult.count(),
-      LabResult.count({ where: { result_status: "normal" } }),
-      LabResult.count({ where: { result_status: "abnormal" } }),
-    ]);
-
-    // Tests by type
-    const testsByType = await LabResult.findAll({
-      attributes: [
-        "test_type",
-        [sequelize.fn("COUNT", sequelize.col("test_type")), "count"],
-      ],
-      group: ["test_type"],
-      raw: true,
-    });
-
-    res.json({
-      success: true,
-      data: {
-        totalTests: totalTests || 0,
-        normalResults: normalResults || 0,
-        abnormalResults: abnormalResults || 0,
-        testsByType: testsByType || [],
-      },
-    });
-  } catch (err) {
-    console.error('Analytics.getLabResultsStats error:', err && err.stack ? err.stack : err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

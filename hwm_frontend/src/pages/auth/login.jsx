@@ -155,6 +155,7 @@ const Login = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
+          <Link to="/" className="home-link">← Back to Home</Link>
           <h2>Welcome Back</h2>
           <p>Sign in to your healthcare account</p>
         </div>

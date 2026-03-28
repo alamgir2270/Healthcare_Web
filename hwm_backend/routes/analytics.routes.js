@@ -30,9 +30,6 @@ router.get("/users/growth", analyticsController.getUserGrowth);
 // Prescription Statistics
 router.get("/prescriptions/stats", analyticsController.getPrescriptionStats);
 
-// Lab Results Statistics
-router.get("/lab-results/stats", analyticsController.getLabResultsStats);
-
 // System Health
 router.get("/system/health", analyticsController.getSystemHealth);
 

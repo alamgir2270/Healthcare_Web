@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const PDFDocument = require("pdfkit");
-const { Prescription, Doctor, Patient, User } = require("../models");
+const { Prescription, Doctor, Patient, User, Bill } = require("../models");
 let nodemailer;
 try {
   nodemailer = require("nodemailer");
@@ -51,6 +51,23 @@ exports.createPrescription = async (req, res) => {
       doctor_id = doctor?.doctor_id;
     }
 
+    // ⚠️ Check if patient has any unpaid bills before allowing prescription
+    const unpaidBills = await Bill.findOne({
+      where: {
+        patient_id: patient_id,
+        payment_status: "unpaid"
+      }
+    });
+    
+    if (unpaidBills) {
+      return res.status(402).json({
+        success: false,
+        message: "Cannot send prescription: Patient has unpaid bills. Please request payment before issuing prescription.",
+        unpaidAmount: unpaidBills.total_amount,
+        billId: unpaidBills.bill_id
+      });
+    }
+
     // Build snapshots for doctor and patient to store on the prescription
     const doctor = await Doctor.findOne({ where: { user_id: user.user_id }, include: [{ model: User }] });
     const patient = await Patient.findOne({ where: { patient_id }, include: [{ model: User }] });
@@ -92,49 +109,103 @@ exports.createPrescription = async (req, res) => {
       const fileName = `${prescription.prescription_id}.pdf`;
       const filePath = path.join(uploadsDir, fileName);
 
+      console.log("📄 Starting PDF generation for prescription:", prescription.prescription_id);
+      console.log("📄 Doctor snapshot:", doctorSnapshot);
+      console.log("📄 Patient snapshot:", patientSnapshot);
+      console.log("📄 Medications:", meds);
+      console.log("📄 Advice:", prescription.advice);
+
       await new Promise((resolve, reject) => {
-        const doc = new PDFDocument({ size: "A4", margin: 50 });
-        const stream = fs.createWriteStream(filePath);
-        doc.pipe(stream);
+        try {
+          const doc = new PDFDocument({ size: "A4", margin: 50, bufferPages: true });
+          const stream = fs.createWriteStream(filePath);
+          
+          // Handle stream errors
+          stream.on("error", (err) => {
+            console.error("❌ Stream error:", err);
+            reject(err);
+          });
 
-        // Header
-        doc.fontSize(18).text(doctorSnapshot.name || "Doctor", { align: "left" });
-        if (doctorSnapshot.specialty) doc.fontSize(12).text(doctorSnapshot.specialty);
-        doc.moveDown();
+          doc.on("error", (err) => {
+            console.error("❌ PDFDocument error:", err);
+            reject(err);
+          });
 
-        // Patient info
-        doc.fontSize(14).text(`Patient: ${patientSnapshot.name || "N/A"}`);
-        doc.fontSize(12).text(`DOB: ${patientSnapshot.dob || "N/A"}   Gender: ${patientSnapshot.gender || "N/A"}`);
-        doc.moveDown();
+          doc.pipe(stream);
 
-        // Medications
-        doc.fontSize(14).text("Medications:");
-        meds.forEach((m, idx) => {
-          const line = `${idx + 1}. ${m.name || m.medication_name || ""} — ${m.dosage || m.dosage || ""} | ${m.frequency || ""}`;
-          doc.fontSize(12).text(line);
-          if (m.notes) doc.fontSize(11).fillColor("#555").text(`   Notes: ${m.notes}`);
-        });
-        doc.moveDown();
-
-        // Advice
-        if (req.body.advice) {
-          doc.fontSize(14).text("Advice / Instructions:");
-          doc.fontSize(12).text(req.body.advice);
+          // Header - Doctor Details
+          doc.fontSize(18).font("Helvetica-Bold").text((doctorSnapshot.name || "Doctor").toString(), { align: "left" });
+          doc.fontSize(11).font("Helvetica").fillColor("#666");
+          if (doctorSnapshot.specialty) doc.text((doctorSnapshot.specialty || "").toString());
+          if (doctorSnapshot.email) doc.text(`Email: ${(doctorSnapshot.email || "").toString()}`);
           doc.moveDown();
+
+          // Prescription Issue Details
+          doc.fontSize(10).fillColor("#333").text(`Prescription Issued: ${new Date(prescription.issued_at).toLocaleDateString()}`);
+          doc.text(`Prescription ID: ${prescription.prescription_id}`);
+          doc.moveDown();
+
+          // Patient Info Section
+          doc.fontSize(14).font("Helvetica-Bold").text("Patient Information", { underline: true });
+          doc.fontSize(11).font("Helvetica").fillColor("#000");
+          doc.text(`Name: ${(patientSnapshot.name || "N/A").toString()}`);
+          doc.text(`Email: ${(patientSnapshot.email || "N/A").toString()}`);
+          doc.text(`DOB: ${(patientSnapshot.dob || "N/A").toString()}   |   Gender: ${(patientSnapshot.gender || "N/A").toString()}`);
+          doc.moveDown();
+
+          // Medications Section
+          doc.fontSize(14).font("Helvetica-Bold").text("Medications & Dosage", { underline: true });
+          doc.fontSize(11).font("Helvetica").fillColor("#000");
+          
+          if (meds && meds.length > 0) {
+            meds.forEach((m, idx) => {
+              const medName = (m.medication_name || m.name || "Unknown").toString();
+              const dosage = (m.dosage || "").toString();
+              const frequency = (m.frequency || "").toString();
+              doc.font("Helvetica-Bold").text(`${idx + 1}. ${medName}`, { continued: false });
+              doc.font("Helvetica").text(`    Dosage: ${dosage}`);
+              doc.text(`    Frequency: ${frequency}`);
+              if (m.notes) {
+                doc.fillColor("#666").text(`    Notes: ${(m.notes || "").toString()}`);
+                doc.fillColor("#000");
+              }
+              doc.moveDown(0.3);
+            });
+          } else {
+            doc.text("No medications prescribed");
+          }
+          doc.moveDown();
+
+          // Advice / Instructions Section
+          if (prescription.advice) {
+            doc.fontSize(14).font("Helvetica-Bold").text("Doctor's Instructions", { underline: true });
+            doc.fontSize(11).font("Helvetica").fillColor("#000").text((prescription.advice || "").toString());
+            doc.moveDown();
+          }
+
+          // Footer
+          doc.fontSize(9).fillColor("#999");
+          doc.text(`Generated: ${new Date().toLocaleString()}`, { align: "center" });
+          doc.text("This is a digital prescription issued by Healthcare Management System", { align: "center" });
+          
+          console.log("📄 Ending PDF document");
+          doc.end();
+
+          stream.on("finish", () => {
+            console.log("✅ PDF generation complete:", filePath);
+            resolve();
+          });
+        } catch (err) {
+          console.error("❌ Error in PDF generation promise:", err);
+          reject(err);
         }
-
-        // Footer / issued at
-        doc.fontSize(10).fillColor("#333").text(`Issued: ${new Date().toLocaleString()}`);
-        doc.end();
-
-        stream.on("finish", resolve);
-        stream.on("error", reject);
       });
 
       // Update prescription with file_url
       const publicPath = `/uploads/prescriptions/${prescription.prescription_id}.pdf`;
       prescription.file_url = publicPath;
       await prescription.save();
+      console.log("✅ Prescription saved with file_url:", publicPath);
 
       // Optionally send email with attachment if SMTP configured
       if (nodemailer && process.env.SMTP_HOST) {
@@ -164,7 +235,8 @@ exports.createPrescription = async (req, res) => {
         }
       }
     } catch (pdfErr) {
-      console.warn("Failed to generate prescription PDF:", pdfErr.message);
+      console.error("❌ Failed to generate prescription PDF:", pdfErr.message);
+      console.error("❌ PDF Error Stack:", pdfErr.stack);
     }
 
     const prescWithData = await Prescription.findByPk(prescription.prescription_id, {

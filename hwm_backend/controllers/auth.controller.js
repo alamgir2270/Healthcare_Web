@@ -204,3 +204,70 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+/**
+ * Change Password - Authenticated user changes their own password
+ * POST /api/auth/change-password
+ * Headers: Authorization: Bearer <token>
+ * Body: { currentPassword, newPassword }
+ */
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user?.id; // From auth middleware
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate inputs
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current and new password required",
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters",
+      });
+    }
+
+    // Find user
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Verify current password
+    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Current password is incorrect",
+      });
+    }
+
+    // Hash and update new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await user.update({
+      password_hash: hashedPassword,
+    });
+
+    console.log(`🔐 Password changed for user: ${user.email}`);
+
+    res.json({
+      success: true,
+      message: "Password changed successfully",
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

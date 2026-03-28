@@ -134,17 +134,29 @@ const DoctorSelector = ({ onClose, onBookingSuccess }) => {
                           👨‍⚕️ Dr. {doctor.User?.full_name}
                         </h4>
                         <p style={{ margin: "0.25rem 0", color: "#666", fontSize: "0.9rem" }}>
-                          <strong>Specialty:</strong> {doctor.specialty}
+                          <strong>� Department:</strong> {doctor.Department?.name || selectedDepartment.name || "Not set"}
                         </p>
                         <p style={{ margin: "0.25rem 0", color: "#666", fontSize: "0.9rem" }}>
-                          <strong>Email:</strong> {doctor.User?.email}
+                          <strong>�🏥 Specialty:</strong> {doctor.specialty || "Not set"}
                         </p>
                         <p style={{ margin: "0.25rem 0", color: "#666", fontSize: "0.9rem" }}>
-                          <strong>Hours:</strong> {doctor.available_hours}
+                          <strong>📄 License:</strong> {doctor.license_no || "Not set"}
+                        </p>
+                        <p style={{ margin: "0.25rem 0", color: "#666", fontSize: "0.9rem" }}>
+                          <strong>📧 Email:</strong> {doctor.User?.email || "Not set"}
+                        </p>
+                        <p style={{ margin: "0.25rem 0", color: "#666", fontSize: "0.9rem" }}>
+                          <strong>📱 Phone:</strong> {doctor.User?.phone || "Not set"}
+                        </p>
+                        <p style={{ margin: "0.25rem 0", color: "#666", fontSize: "0.9rem" }}>
+                          <strong>📅 Available Days:</strong> {doctor.available_days || "Not set"}
+                        </p>
+                        <p style={{ margin: "0.25rem 0", color: "#666", fontSize: "0.9rem" }}>
+                          <strong>⏰ Available Hours:</strong> {doctor.available_hours || "Not set"}
                         </p>
                         {doctor.bio && (
                           <p style={{ margin: "0.5rem 0", color: "#555", fontSize: "0.85rem", fontStyle: "italic" }}>
-                            "{doctor.bio}"
+                            <strong>📋 Biography:</strong> "{doctor.bio}"
                           </p>
                         )}
                         {doctor.rating_cache && (

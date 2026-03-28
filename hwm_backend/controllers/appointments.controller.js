@@ -1,4 +1,4 @@
-const { Appointment, Patient, Doctor, User } = require("../models");
+const { Appointment, Patient, Doctor, User, Bill } = require("../models");
 
 exports.getAppointments = async (req, res) => {
   try {
@@ -77,6 +77,28 @@ exports.createAppointment = async (req, res) => {
       status: "scheduled",
     });
 
+    // Auto-create Bill when appointment is booked
+    try {
+      const defaultFee = 800; // 800 BDT standard consultation fee
+      const issueDate = new Date();
+      const dueDate = new Date(issueDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from issue
+      
+      const billData = {
+        appointment_id: appointment.appointment_id,
+        patient_id: patient.patient_id,
+        fee_type: "consultation", // ✅ Mark as consultation, not lab test
+        total_amount: defaultFee,
+        payment_status: "unpaid",
+        issue_date: issueDate,
+        due_date: dueDate,
+      };
+      await Bill.create(billData);
+      console.log(`Auto-created Bill for appointment ${appointment.appointment_id} with amount ৳${defaultFee} (Due: ${dueDate.toDateString()})`);
+    } catch (billErr) {
+      console.warn("Failed to auto-create bill during appointment booking:", billErr.message);
+      // Don't fail the appointment creation if billing fails; just log and continue
+    }
+
     const apptWithData = await Appointment.findByPk(appointment.appointment_id, {
       include: [
         { model: Patient, include: [{ model: User }] },
@@ -112,7 +134,36 @@ exports.updateAppointment = async (req, res) => {
       return res.status(403).json({ success: false, message: "Not authorized to update this appointment" });
     }
 
+    const previousStatus = appointment.status;
     await appointment.update(req.body);
+
+    // Auto-create Bill if appointment is marked as "completed" and no bill exists yet
+    if (req.body.status === "completed" && previousStatus !== "completed") {
+      try {
+        const existingBill = await Bill.findOne({ where: { appointment_id: appointment.appointment_id } });
+        if (!existingBill) {
+          // Default consultation fee in Bangladeshi Taka (BDT)
+          const defaultFee = 800; // 800 BDT standard consultation fee
+          const issueDate = new Date();
+          const dueDate = new Date(issueDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from issue
+          
+          const billData = {
+            appointment_id: appointment.appointment_id,
+            patient_id: appointment.patient_id,
+            fee_type: "consultation", // ✅ Mark as consultation, not lab test
+            total_amount: defaultFee,
+            payment_status: "unpaid",
+            issue_date: issueDate,
+            due_date: dueDate,
+          };
+          await Bill.create(billData);
+          console.log(`Auto-created Bill for appointment ${appointment.appointment_id} (Due: ${dueDate.toDateString()})`);
+        }
+      } catch (billErr) {
+        console.warn("Failed to auto-create bill:", billErr.message);
+        // Don't fail the appointment update if billing fails; just log and continue
+      }
+    }
 
     const updatedAppt = await Appointment.findByPk(appointment.appointment_id, {
       include: [

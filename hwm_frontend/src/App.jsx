@@ -9,6 +9,7 @@ import ResetPassword from "./pages/auth/ResetPassword";
 
 // Dashboards
 import AdminDashboard from "./pages/admin/dashboard";
+import AdminProfile from "./pages/admin/profile";
 import DoctorDashboard from "./pages/doctor/dashboard";
 import PatientDashboard from "./pages/patient/dashboard";
 
@@ -34,6 +35,17 @@ function App() {
             <PrivateRoute>
               <RoleRoute role="admin">
                 <AdminDashboard />
+              </RoleRoute>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/admin/profile"
+          element={
+            <PrivateRoute>
+              <RoleRoute role="admin">
+                <AdminProfile />
               </RoleRoute>
             </PrivateRoute>
           }

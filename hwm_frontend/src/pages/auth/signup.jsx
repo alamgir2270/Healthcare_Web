@@ -154,6 +154,7 @@ const Signup = () => {
     <div className="signup-container">
       <div className="signup-card">
         <div className="signup-header">
+          <Link to="/" className="home-link">← Back to Home</Link>
           <h2>Patient Registration</h2>
           <p>Create your patient account</p>
         </div>

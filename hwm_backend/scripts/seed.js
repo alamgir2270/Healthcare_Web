@@ -11,7 +11,7 @@
  */
 
 const bcrypt = require("bcrypt");
-const { sequelize, User, Doctor, Admin, Department, Clinic } = require("../models");
+const { sequelize, User, Doctor, Admin, Department, Clinic, Patient, HealthStatus } = require("../models");
 require("dotenv").config();
 
 const seedDatabase = async () => {
@@ -210,6 +210,185 @@ const seedDatabase = async () => {
       console.log(`   Password: ${docData.password}\n`);
     }
 
+    // ===== CREATE SAMPLE PATIENTS =====
+    console.log("👥 Creating sample patients...");
+    const patientData = [
+      {
+        email: "john.doe@email.com",
+        name: "John Doe",
+        password: "Patient@123456",
+        phone: "+8801712345678",
+        date_of_birth: "1985-03-15",
+        gender: "Male",
+        address: "456 Oak Street, Healthcare City",
+        emergency_contact: "+8801812345678",
+        blood_type: "O+",
+        allergies: "Penicillin",
+        medical_conditions: "Hypertension",
+      },
+      {
+        email: "jane.smith@email.com",
+        name: "Jane Smith",
+        password: "Patient@123456",
+        phone: "+8801723456789",
+        date_of_birth: "1990-07-22",
+        gender: "Female",
+        address: "789 Pine Avenue, Healthcare City",
+        emergency_contact: "+8801823456789",
+        blood_type: "A-",
+        allergies: "None",
+        medical_conditions: "Asthma",
+      },
+      {
+        email: "mike.johnson@email.com",
+        name: "Mike Johnson",
+        password: "Patient@123456",
+        phone: "+8801734567890",
+        date_of_birth: "1978-11-08",
+        gender: "Male",
+        address: "321 Elm Road, Healthcare City",
+        emergency_contact: "+8801834567890",
+        blood_type: "B+",
+        allergies: "Shellfish",
+        medical_conditions: "Diabetes Type 2",
+      },
+      {
+        email: "sarah.wilson@email.com",
+        name: "Sarah Wilson",
+        password: "Patient@123456",
+        phone: "+8801745678901",
+        date_of_birth: "1995-01-30",
+        gender: "Female",
+        address: "654 Maple Lane, Healthcare City",
+        emergency_contact: "+8801845678901",
+        blood_type: "AB+",
+        allergies: "None",
+        medical_conditions: "None",
+      },
+    ];
+
+    const patients = [];
+    for (const patData of patientData) {
+      const patPassword = await bcrypt.hash(patData.password, 10);
+      const patSalt = await bcrypt.genSalt(10);
+
+      let patUser = await User.findOne({ where: { email: patData.email } });
+      if (!patUser) {
+        patUser = await User.create({
+          email: patData.email,
+          password_hash: patPassword,
+          salt: patSalt,
+          role: "patient",
+          full_name: patData.name,
+          phone: patData.phone,
+          is_active: true,
+        });
+      }
+
+      let patient = await Patient.findOne({ where: { user_id: patUser.user_id } });
+      if (!patient) {
+        patient = await Patient.create({
+          user_id: patUser.user_id,
+          clinic_id: clinic.clinic_id,
+          date_of_birth: patData.date_of_birth,
+          gender: patData.gender,
+          address: patData.address,
+          emergency_contact: patData.emergency_contact,
+          blood_type: patData.blood_type,
+          allergies: patData.allergies,
+          medical_conditions: patData.medical_conditions,
+        });
+      }
+      patients.push({ user: patUser, patient });
+      console.log(`✅ ${patData.name}`);
+      console.log(`   Email: ${patData.email}`);
+      console.log(`   Password: ${patData.password}\n`);
+    }
+
+    // ===== CREATE SAMPLE HEALTH STATUS =====
+    console.log("🏥 Creating sample health status records...");
+    const healthStatusData = [
+      {
+        patientIndex: 0, // John Doe
+        systolic_bp: 140,
+        diastolic_bp: 90,
+        heart_rate: 78,
+        temperature: 98.6,
+        weight: 180,
+        height: 70,
+        bmi: 25.8,
+        overall_status: "moderate",
+        risk_level: "medium",
+        notes: "Regular checkup - blood pressure slightly elevated",
+      },
+      {
+        patientIndex: 1, // Jane Smith
+        systolic_bp: 120,
+        diastolic_bp: 80,
+        heart_rate: 72,
+        temperature: 98.2,
+        weight: 140,
+        height: 65,
+        bmi: 23.3,
+        overall_status: "good",
+        risk_level: "low",
+        notes: "Asthma under control, regular exercise routine",
+      },
+      {
+        patientIndex: 2, // Mike Johnson
+        systolic_bp: 135,
+        diastolic_bp: 85,
+        heart_rate: 82,
+        temperature: 98.8,
+        weight: 200,
+        height: 68,
+        bmi: 30.4,
+        overall_status: "poor",
+        risk_level: "high",
+        notes: "Diabetes management - weight loss recommended",
+      },
+      {
+        patientIndex: 3, // Sarah Wilson
+        systolic_bp: 115,
+        diastolic_bp: 75,
+        heart_rate: 68,
+        temperature: 97.9,
+        weight: 125,
+        height: 63,
+        bmi: 22.1,
+        overall_status: "excellent",
+        risk_level: "low",
+        notes: "Excellent health, regular checkups maintained",
+      },
+    ];
+
+    for (const hsData of healthStatusData) {
+      const patient = patients[hsData.patientIndex].patient;
+      const existingHS = await HealthStatus.findOne({
+        where: { patient_id: patient.patient_id },
+        order: [['recorded_date', 'DESC']]
+      });
+
+      if (!existingHS) {
+        await HealthStatus.create({
+          patient_id: patient.patient_id,
+          recorded_by: patients[hsData.patientIndex].user.user_id, // Self-recorded for demo
+          systolic_bp: hsData.systolic_bp,
+          diastolic_bp: hsData.diastolic_bp,
+          heart_rate: hsData.heart_rate,
+          temperature: hsData.temperature,
+          weight: hsData.weight,
+          height: hsData.height,
+          bmi: hsData.bmi,
+          overall_status: hsData.overall_status,
+          risk_level: hsData.risk_level,
+          notes: hsData.notes,
+          recorded_date: new Date(),
+        });
+        console.log(`✅ Health status for ${patients[hsData.patientIndex].user.full_name}`);
+      }
+    }
+
     // ===== SUMMARY =====
     console.log("=" * 60);
     console.log("🎉 SEEDING COMPLETE!\n");
@@ -246,6 +425,23 @@ const seedDatabase = async () => {
     console.log("    8. Dr. Robert Davis");
     console.log("       Email: pediatric2@healthcare.com");
     console.log("       Password: Pediatric@123456\n");
+    console.log("PATIENTS (with health status):");
+    console.log("  1. John Doe");
+    console.log("     Email: john.doe@email.com");
+    console.log("     Password: Patient@123456");
+    console.log("     Health Status: Moderate (BP: 140/90, BMI: 25.8)");
+    console.log("  2. Jane Smith");
+    console.log("     Email: jane.smith@email.com");
+    console.log("     Password: Patient@123456");
+    console.log("     Health Status: Good (BP: 120/80, BMI: 23.3)");
+    console.log("  3. Mike Johnson");
+    console.log("     Email: mike.johnson@email.com");
+    console.log("     Password: Patient@123456");
+    console.log("     Health Status: Poor (BP: 135/85, BMI: 30.4)");
+    console.log("  4. Sarah Wilson");
+    console.log("     Email: sarah.wilson@email.com");
+    console.log("     Password: Patient@123456");
+    console.log("     Health Status: Excellent (BP: 115/75, BMI: 22.1)\n");
     console.log("PATIENT (self-signup):");
     console.log("  Create via: http://localhost:5173/signup\n");
     console.log("=" * 60);
